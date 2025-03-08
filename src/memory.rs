@@ -2,19 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::ffi::{
-    CString,
-};
-use std::os::raw::{
-    c_char,
-    c_void,
-};
+use std::ffi::CString;
+use std::os::raw::{c_char, c_void};
 
 /// Creates a function with a given `$name` that releases the memory for a type `$t`.
 #[macro_export]
 macro_rules! define_destructor (
     ($name:ident, $t:ty) => (
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn $name(obj: *mut $t) {
             let _ = unsafe{ Box::from_raw(obj) };
         }
@@ -38,15 +33,14 @@ macro_rules! define_destructor_with_lifetimes (
     )
 );
 
-/// destroy function for releasing the memory for boxed `repr(C)` structs.
 define_destructor!(destroy, c_void);
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn destroy_raw_uuid(obj: *mut [u8; 16]) {
-    let _ = unsafe{ Box::from_raw(obj) };
+    let _ = unsafe { Box::from_raw(obj) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn destroy_c_char(s: *mut c_char) {
     let _ = unsafe { CString::from_raw(s) };
 }

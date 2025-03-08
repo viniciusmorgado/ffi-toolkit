@@ -3,16 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use std;
-
-use std::os::raw::{
-    c_char,
-    c_void,
-};
-
-use string::{
-    string_to_c_char,
-};
-
+use std::os::raw::{c_char, c_void};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -78,35 +69,36 @@ impl ExternResult {
     }
 
     pub fn err<S>(code: ErrorCode, msg: S) -> *mut Self
-    where S: Into<String> {
+    where
+        S: Into<String>,
+    {
         Box::into_raw(Box::new(ExternResult {
             ok: std::ptr::null_mut(),
             err: Box::into_raw(Box::new(ExternError {
                 code,
-                message: string_to_c_char(msg),
+                message: crate::string::string_to_c_char(msg),
             })),
         }))
     }
 }
 
-impl<T, E> From<Result<T, E>> for ExternResult where E: std::error::Error {
+impl<T, E> From<Result<T, E>> for ExternResult
+where
+    E: std::error::Error,
+{
     fn from(result: Result<T, E>) -> Self {
         match result {
-            Ok(value) => {
-                ExternResult {
-                    ok: Box::into_raw(Box::new(value)) as *const _ as *const c_void,
-                    err: std::ptr::null(),
-                }
+            Ok(value) => ExternResult {
+                ok: Box::into_raw(Box::new(value)) as *const _ as *const c_void,
+                err: std::ptr::null(),
             },
-            Err(e) => {
-                ExternResult {
-                    ok: std::ptr::null(),
-                    err: Box::into_raw(Box::new(ExternError {
-                        code: ErrorCode::Other,
-                        message: string_to_c_char(e.to_string()),
-                    })),
-                }
-            }
+            Err(e) => ExternResult {
+                ok: std::ptr::null(),
+                err: Box::into_raw(Box::new(ExternError {
+                    code: ErrorCode::Other,
+                    message: crate::string::string_to_c_char(e.to_string()),
+                })),
+            },
         }
     }
 }
