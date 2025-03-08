@@ -10,8 +10,6 @@ A Rust crate that provides shared patterns and utilities for creating Foreign Fu
 2. **Error Handling** - Convert Rust's Result type to a C-compatible format
 3. **String Conversion** - Transform between Rust strings and C strings
 
-Originally developed by Mozilla and now maintained as a community fork, this library helps you create safer, more reliable FFI interfaces with minimal boilerplate code.
-
 ## Installation
 
 Add the following to your `Cargo.toml`:
