@@ -10,7 +10,7 @@ use std::os::raw::{c_char, c_void};
 macro_rules! define_destructor (
     ($name:ident, $t:ty) => (
         #[unsafe(no_mangle)]
-        pub extern "C" fn $name(obj: *mut $t) {
+        extern "C" fn $name(obj: *mut $t) {
             let _ = unsafe{ Box::from_raw(obj) };
         }
     )
@@ -137,7 +137,9 @@ mod tests {
         assert_pointer_not_null!(ptr);
 
         // Clean up
-        unsafe { let _ = Box::from_raw(ptr); };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        };
     }
 
     #[test]
