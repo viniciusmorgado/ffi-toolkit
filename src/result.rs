@@ -5,11 +5,30 @@
 use std;
 use std::os::raw::{c_char, c_void};
 
+/// Error codes that can be returned across the FFI boundary.
+/// These codes provide a standardized way to communicate error types
+/// between Rust and C/C++ code.
 #[repr(C)]
 #[derive(Debug)]
 pub enum ErrorCode {
+    /// Generic error for cases that don't fit other categories
     Other,
+    /// Authentication or authorization failed
     AuthenticationError,
+    /// Input validation failed (invalid format, out of range, etc.)
+    ValidationError,
+    /// Requested resource or item was not found
+    NotFoundError,
+    /// Operation not permitted due to insufficient permissions
+    PermissionError,
+    /// Operation timed out
+    TimeoutError,
+    /// Network-related error (connection failed, DNS error, etc.)
+    NetworkError,
+    /// Invalid argument passed to function
+    InvalidArgumentError,
+    /// I/O operation failed (file read/write, etc.)
+    IoError,
 }
 
 /// An error struct containing an error code and a description string.
@@ -345,9 +364,7 @@ mod tests {
     #[test]
     fn test_multiple_extern_results() {
         // Create multiple results to ensure no memory conflicts
-        let results: Vec<*mut ExternResult> = (0..10)
-            .map(|i| ExternResult::ok(i))
-            .collect();
+        let results: Vec<*mut ExternResult> = (0..10).map(|i| ExternResult::ok(i)).collect();
 
         unsafe {
             for result_ptr in results {
@@ -409,6 +426,253 @@ mod tests {
             let _ = CString::from_raw(error.message as *mut _);
             let _ = Box::from_raw(result.err as *mut ExternError);
             let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_all_error_code_variants() {
+        // Test all error code variants to ensure they can be created and used
+        let test_cases = vec![
+            (ErrorCode::Other, "Generic error"),
+            (ErrorCode::AuthenticationError, "Auth failed"),
+            (ErrorCode::ValidationError, "Invalid input"),
+            (ErrorCode::NotFoundError, "Resource not found"),
+            (ErrorCode::PermissionError, "Access denied"),
+            (ErrorCode::TimeoutError, "Request timed out"),
+            (ErrorCode::NetworkError, "Network unavailable"),
+            (ErrorCode::InvalidArgumentError, "Bad argument"),
+            (ErrorCode::IoError, "File read failed"),
+        ];
+
+        for (code, message) in test_cases {
+            let result_ptr = ExternResult::err(code, message);
+
+            unsafe {
+                assert!(!result_ptr.is_null());
+                let result = &*result_ptr;
+                assert!(result.ok.is_null());
+                assert!(!result.err.is_null());
+
+                let error = &*result.err;
+                let c_str = std::ffi::CStr::from_ptr(error.message);
+                let msg_str = c_str.to_str().unwrap();
+                assert_eq!(msg_str, message);
+
+                // Clean up
+                let _ = CString::from_raw(error.message as *mut _);
+                let _ = Box::from_raw(result.err as *mut ExternError);
+                let _ = Box::from_raw(result_ptr);
+            }
+        }
+    }
+
+    #[test]
+    fn test_validation_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::ValidationError,
+            "Email format is invalid"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::ValidationError => {}
+                _ => panic!("Expected ValidationError"),
+            }
+
+            let c_str = std::ffi::CStr::from_ptr(error.message);
+            assert_eq!(c_str.to_str().unwrap(), "Email format is invalid");
+
+            // Clean up
+            let _ = CString::from_raw(error.message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_not_found_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::NotFoundError,
+            "User with ID 123 not found"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::NotFoundError => {}
+                _ => panic!("Expected NotFoundError"),
+            }
+
+            let c_str = std::ffi::CStr::from_ptr(error.message);
+            assert_eq!(c_str.to_str().unwrap(), "User with ID 123 not found");
+
+            // Clean up
+            let _ = CString::from_raw(error.message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_permission_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::PermissionError,
+            "Insufficient permissions to access resource"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::PermissionError => {}
+                _ => panic!("Expected PermissionError"),
+            }
+
+            // Clean up
+            let _ = CString::from_raw((&*result.err).message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_timeout_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::TimeoutError,
+            "Operation exceeded 30 second timeout"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::TimeoutError => {}
+                _ => panic!("Expected TimeoutError"),
+            }
+
+            // Clean up
+            let _ = CString::from_raw(error.message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_network_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::NetworkError,
+            "Failed to connect to server: connection refused"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::NetworkError => {}
+                _ => panic!("Expected NetworkError"),
+            }
+
+            // Clean up
+            let _ = CString::from_raw(error.message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_invalid_argument_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::InvalidArgumentError,
+            "Argument 'count' must be positive"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::InvalidArgumentError => {}
+                _ => panic!("Expected InvalidArgumentError"),
+            }
+
+            // Clean up
+            let _ = CString::from_raw(error.message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_io_error() {
+        let result_ptr = ExternResult::err(
+            ErrorCode::IoError,
+            "Failed to read file: permission denied"
+        );
+
+        unsafe {
+            let result = &*result_ptr;
+            let error = &*result.err;
+
+            match error.code {
+                ErrorCode::IoError => {}
+                _ => panic!("Expected IoError"),
+            }
+
+            // Clean up
+            let _ = CString::from_raw(error.message as *mut _);
+            let _ = Box::from_raw(result.err as *mut ExternError);
+            let _ = Box::from_raw(result_ptr);
+        }
+    }
+
+    #[test]
+    fn test_error_code_distinction() {
+        // Ensure we can distinguish between different error codes
+        let validation_err = ExternResult::err(ErrorCode::ValidationError, "Validation");
+        let network_err = ExternResult::err(ErrorCode::NetworkError, "Network");
+        let io_err = ExternResult::err(ErrorCode::IoError, "IO");
+
+        unsafe {
+            let v_error = &*(&*validation_err).err;
+            let n_error = &*(&*network_err).err;
+            let i_error = &*(&*io_err).err;
+
+            // Verify each error has the correct code
+            match v_error.code {
+                ErrorCode::ValidationError => {}
+                _ => panic!("Expected ValidationError"),
+            }
+
+            match n_error.code {
+                ErrorCode::NetworkError => {}
+                _ => panic!("Expected NetworkError"),
+            }
+
+            match i_error.code {
+                ErrorCode::IoError => {}
+                _ => panic!("Expected IoError"),
+            }
+
+            // Clean up
+            let _ = CString::from_raw(v_error.message as *mut _);
+            let _ = Box::from_raw((&*validation_err).err as *mut ExternError);
+            let _ = Box::from_raw(validation_err);
+
+            let _ = CString::from_raw(n_error.message as *mut _);
+            let _ = Box::from_raw((&*network_err).err as *mut ExternError);
+            let _ = Box::from_raw(network_err);
+
+            let _ = CString::from_raw(i_error.message as *mut _);
+            let _ = Box::from_raw((&*io_err).err as *mut ExternError);
+            let _ = Box::from_raw(io_err);
         }
     }
 }

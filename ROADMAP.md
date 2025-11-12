@@ -11,7 +11,7 @@ This roadmap outlines planned improvements and extensions to make `ffi-toolkit` 
 - [ ] Debug utilities to track memory leaks across FFI boundaries
 
 ### Error Handling
-- [ ] Expanded error type system (more specific error codes)
+- [x] Expanded error type system (more specific error codes)
 - [ ] Error context preservation (stack traces where possible)
 - [ ] Exception bridging for C++ (convert between Rust's `Result` and C++ exceptions)
 - [ ] Error callbacks (allow registering C functions to be called on error)
